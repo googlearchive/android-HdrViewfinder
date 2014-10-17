@@ -1,0 +1,82 @@
+Android HdrViewfinder Sample
+==============================
+
+This demo shows how to use Camera2 API and RenderScript to implement an HDR viewfinder.
+
+Introduction
+------------
+
+This demo implements a real-time high-dynamic-range camera viewfinder, by alternating the sensor's
+exposure time between two exposure values on even and odd frames, and then compositing together the
+latest two frames whenever a new frame is captured.
+
+The demo has three modes: Regular auto-exposure viewfinder, split-screen manual exposure, and the
+fused HDR viewfinder.  The latter two use manual exposure controlled by the user, by swiping up/down
+on the right and left halves of the viewfinder.  The left half controls the exposure time of even
+frames, and the right half controls the exposure time of odd frames.
+
+In split-screen mode, the even frames are shown on the left and the odd frames on the right, so the
+user can see two different exposures of the scene simultaneously.  In fused HDR mode, the even/odd
+frames are merged together into a single image.  By selecting different exposure values for the
+even/odd frames, the fused image has a higher dynamic range than the regular viewfinder.
+
+The HDR fusion and the split-screen viewfinder processing is done with RenderScript; as is the
+necessary YUV->RGB conversion. The camera subsystem outputs YUV images naturally, while the GPU and
+display subsystems generally only accept RGB data.  Therefore, after the images are
+fused/composited, a standard YUV->RGB color transform is applied before the the data is written to
+the output Allocation. The HDR fusion algorithm is very simple, and tends to result in
+lower-contrast scenes, but has very few artifacts and can run very fast.
+
+Data is passed between the subsystems (camera, RenderScript, and display) using the Android {@link
+android.view.Surface} class, which allows for zero-copy transport of large buffers between processes
+and subsystems.
+
+Pre-requisites
+--------------
+
+- Android SDK v21
+- Android Build Tools v21
+- Android Support Repository
+
+Getting Started
+---------------
+
+This sample uses the Gradle build system. To build this project, use the
+"gradlew build" command or use "Import Project" in Android Studio.
+
+Screenshots
+-----------
+
+![Split mode](screenshots/image1.png)
+
+Support
+-------
+
+- Google+ Community: https://plus.google.com/communities/105153134372062985968
+- Stack Overflow: http://stackoverflow.com/questions/tagged/android
+
+If you've found an error in this sample, please file an issue:
+https://github.com/googlesamples/android-HdrViewfinder
+
+Patches are encouraged, and may be submitted by forking this project and
+submitting a pull request through GitHub. Please see CONTRIBUTING.md for more details.
+
+License
+-------
+
+Copyright 2014 The Android Open Source Project, Inc.
+
+Licensed to the Apache Software Foundation (ASF) under one or more contributor
+license agreements.  See the NOTICE file distributed with this work for
+additional information regarding copyright ownership.  The ASF licenses this
+file to you under the Apache License, Version 2.0 (the "License"); you may not
+use this file except in compliance with the License.  You may obtain a copy of
+the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+License for the specific language governing permissions and limitations under
+the License.

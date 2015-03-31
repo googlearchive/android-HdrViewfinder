@@ -9,4 +9,15 @@ categories:   [Media]
 languages:    [Java]
 solutions:    [Mobile]
 github:       android-HdrViewfinder
+level:        ADVANCED
+icon:         big_icon.png
+apiRefs:
+    - android:android.hardware.camera2.CameraAccessException
+    - android:android.hardware.camera2.CameraCaptureSession
+    - android:android.hardware.camera2.CameraCharacteristics
+    - android:android.hardware.camera2.CameraDevice
+    - android:android.hardware.camera2.CameraManager
+    - android:android.hardware.camera2.CaptureRequest
+    - android:android.hardware.camera2.CaptureResult
+    - android:android.hardware.camera2.TotalCaptureResult
 license: apache2

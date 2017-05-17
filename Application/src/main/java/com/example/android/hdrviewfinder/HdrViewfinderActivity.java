@@ -17,6 +17,7 @@
 package com.example.android.hdrviewfinder;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.camera2.CameraAccessException;
@@ -52,6 +53,8 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 
 /**
  * A small demo of advanced camera functionality with the Android camera2 API.
@@ -119,7 +122,7 @@ public class HdrViewfinderActivity extends AppCompatActivity implements
     private Surface mProcessingHdrSurface;
     private Surface mProcessingNormalSurface;
     CaptureRequest.Builder mHdrBuilder;
-    ArrayList<CaptureRequest> mHdrRequests = new ArrayList<CaptureRequest>(2);
+    ArrayList<CaptureRequest> mHdrRequests = new ArrayList<>(2);
 
     CaptureRequest mPreviewRequest;
 
@@ -201,7 +204,7 @@ public class HdrViewfinderActivity extends AppCompatActivity implements
         switch (item.getItemId()) {
             case R.id.info: {
                 MessageDialogFragment.newInstance(R.string.intro_message)
-                        .show(getFragmentManager(), FRAGMENT_DIALOG);
+                        .show(getSupportFragmentManager(), FRAGMENT_DIALOG);
                 break;
             }
         }
@@ -255,7 +258,7 @@ public class HdrViewfinderActivity extends AppCompatActivity implements
     private View.OnClickListener mHelpButtonListener = new View.OnClickListener() {
         public void onClick(View v) {
             MessageDialogFragment.newInstance(R.string.help_text)
-                    .show(getFragmentManager(), FRAGMENT_DIALOG);
+                    .show(getSupportFragmentManager(), FRAGMENT_DIALOG);
         }
     };
 
@@ -296,13 +299,9 @@ public class HdrViewfinderActivity extends AppCompatActivity implements
     }
 
     private void requestCameraPermissions() {
-        boolean shouldProvideRationale =
-            ActivityCompat.shouldShowRequestPermissionRationale(this,
-                    Manifest.permission.CAMERA);
-
         // Provide an additional rationale to the user. This would happen if the user denied the
         // request previously, but didn't check the "Don't ask again" checkbox.
-        if (shouldProvideRationale) {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
             Log.i(TAG, "Displaying camera permission rationale to provide additional context.");
             Snackbar.make(rootView, R.string.camera_permission_rationale, Snackbar
                     .LENGTH_INDEFINITE)
@@ -376,58 +375,56 @@ public class HdrViewfinderActivity extends AppCompatActivity implements
 
     private void findAndOpenCamera() {
         boolean cameraPermissions = checkCameraPermissions();
-        if (cameraPermissions) {
-            String errorMessage = "Unknown error";
-            boolean foundCamera = false;
-            initializeCamera();
-            if (cameraPermissions && mCameraOps != null) {
-                try {
-                    // Find first back-facing camera that has necessary capability.
-                    String[] cameraIds = mCameraManager.getCameraIdList();
-                    for (String id : cameraIds) {
-                        CameraCharacteristics info = mCameraManager.getCameraCharacteristics(id);
-                        int facing = info.get(CameraCharacteristics.LENS_FACING);
+        if (!cameraPermissions) {
+            return;
+        }
+        String errorMessage = "Unknown error";
+        boolean foundCamera = false;
+        initializeCamera();
+        if (mCameraOps != null) {
+            try {
+                // Find first back-facing camera that has necessary capability.
+                String[] cameraIds = mCameraManager.getCameraIdList();
+                for (String id : cameraIds) {
+                    CameraCharacteristics info = mCameraManager.getCameraCharacteristics(id);
+                    Integer facing = info.get(CameraCharacteristics.LENS_FACING);
+                    Integer level = info.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL);
+                    boolean hasFullLevel = Objects.equals(level,
+                            CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL);
 
-                        int level = info.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL);
-                        boolean hasFullLevel
-                                = (level
-                                == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL);
+                    int[] capabilities = info
+                            .get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
+                    Integer syncLatency = info.get(CameraCharacteristics.SYNC_MAX_LATENCY);
+                    boolean hasManualControl = hasCapability(capabilities,
+                            CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR);
+                    boolean hasEnoughCapability = hasManualControl && Objects.equals(syncLatency,
+                            CameraCharacteristics.SYNC_MAX_LATENCY_PER_FRAME_CONTROL);
 
-                        int[] capabilities = info
-                                .get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
-                        int syncLatency = info.get(CameraCharacteristics.SYNC_MAX_LATENCY);
-                        boolean hasManualControl = hasCapability(capabilities,
-                                CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR);
-                        boolean hasEnoughCapability = hasManualControl &&
-                                syncLatency
-                                        == CameraCharacteristics.SYNC_MAX_LATENCY_PER_FRAME_CONTROL;
-
-                        // All these are guaranteed by
-                        // CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL, but checking
-                        // for only the things we care about expands range of devices we can run on.
-                        // We want:
-                        //  - Back-facing camera
-                        //  - Manual sensor control
-                        //  - Per-frame synchronization (so that exposure can be changed every frame)
-                        if (facing == CameraCharacteristics.LENS_FACING_BACK &&
-                                (hasFullLevel || hasEnoughCapability)) {
-                            // Found suitable camera - get info, open, and set up outputs
-                            mCameraInfo = info;
-                            mCameraOps.openCamera(id);
-                            configureSurfaces();
-                            foundCamera = true;
-                            break;
-                        }
+                    // All these are guaranteed by
+                    // CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL, but checking
+                    // for only the things we care about expands range of devices we can run on.
+                    // We want:
+                    //  - Back-facing camera
+                    //  - Manual sensor control
+                    //  - Per-frame synchronization (so that exposure can be changed every frame)
+                    if (Objects.equals(facing, CameraCharacteristics.LENS_FACING_BACK) &&
+                            (hasFullLevel || hasEnoughCapability)) {
+                        // Found suitable camera - get info, open, and set up outputs
+                        mCameraInfo = info;
+                        mCameraOps.openCamera(id);
+                        configureSurfaces();
+                        foundCamera = true;
+                        break;
                     }
-                    if (!foundCamera) {
-                        errorMessage = getString(R.string.camera_no_good);
-                    }
-                } catch (CameraAccessException e) {
-                    errorMessage = getErrorString(e);
                 }
                 if (!foundCamera) {
-                    showErrorDialog(errorMessage);
+                    errorMessage = getString(R.string.camera_no_good);
                 }
+            } catch (CameraAccessException e) {
+                errorMessage = getErrorString(e);
+            }
+            if (!foundCamera) {
+                showErrorDialog(errorMessage);
             }
         }
     }
@@ -468,7 +465,9 @@ public class HdrViewfinderActivity extends AppCompatActivity implements
 
         StreamConfigurationMap configs =
                 mCameraInfo.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-
+        if (configs == null) {
+            throw new RuntimeException("Cannot get available picture/preview sizes.");
+        }
         Size[] outputSizes = configs.getOutputSizes(SurfaceHolder.class);
 
         Size outputSize = outputSizes[0];
@@ -508,7 +507,7 @@ public class HdrViewfinderActivity extends AppCompatActivity implements
         mProcessingHdrSurface = mProcessor.getInputHdrSurface();
         mProcessingNormalSurface = mProcessor.getInputNormalSurface();
 
-        List<Surface> cameraOutputSurfaces = new ArrayList<Surface>();
+        List<Surface> cameraOutputSurfaces = new ArrayList<>();
         cameraOutputSurfaces.add(mProcessingHdrSurface);
         cameraOutputSurfaces.add(mProcessingNormalSurface);
 
@@ -541,26 +540,30 @@ public class HdrViewfinderActivity extends AppCompatActivity implements
     private CameraCaptureSession.CaptureCallback mCaptureCallback
             = new CameraCaptureSession.CaptureCallback() {
 
-        public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,
-                                       TotalCaptureResult result) {
+        public void onCaptureCompleted(@NonNull CameraCaptureSession session,
+                                       @NonNull CaptureRequest request,
+                                       @NonNull TotalCaptureResult result) {
 
             // Only update UI every so many frames
             // Use an odd number here to ensure both even and odd exposures get an occasional update
             long frameNumber = result.getFrameNumber();
             if (frameNumber % 3 != 0) return;
 
-            long exposureTime = result.get(CaptureResult.SENSOR_EXPOSURE_TIME);
+            final Long exposureTime = result.get(CaptureResult.SENSOR_EXPOSURE_TIME);
+            if (exposureTime == null) {
+                throw new RuntimeException("Cannot get exposure time.");
+            }
 
             // Format exposure time nicely
             String exposureText;
             if (exposureTime > ONE_SECOND) {
-                exposureText = String.format("%.2f s", exposureTime / 1e9);
+                exposureText = String.format(Locale.US, "%.2f s", exposureTime / 1e9);
             } else if (exposureTime > MILLI_SECOND) {
-                exposureText = String.format("%.2f ms", exposureTime / 1e6);
+                exposureText = String.format(Locale.US, "%.2f ms", exposureTime / 1e6);
             } else if (exposureTime > MICRO_SECOND) {
-                exposureText = String.format("%.2f us", exposureTime / 1e3);
+                exposureText = String.format(Locale.US, "%.2f us", exposureTime / 1e3);
             } else {
-                exposureText = String.format("%d ns", exposureTime);
+                exposureText = String.format(Locale.US, "%d ns", exposureTime);
             }
 
             Object tag = request.getTag();
@@ -641,9 +644,11 @@ public class HdrViewfinderActivity extends AppCompatActivity implements
      */
     @Override
     public void showErrorDialog(String errorMessage) {
-        MessageDialogFragment.newInstance(errorMessage).show(getFragmentManager(), FRAGMENT_DIALOG);
+        MessageDialogFragment.newInstance(errorMessage)
+                .show(getSupportFragmentManager(), FRAGMENT_DIALOG);
     }
 
+    @SuppressLint("SwitchIntDef")
     @Override
     public String getErrorString(CameraAccessException e) {
         String errorMessage;

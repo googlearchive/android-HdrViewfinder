@@ -19,12 +19,10 @@ package com.example.android.hdrviewfinder;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.SurfaceView;
 import android.view.View;
-import android.view.ViewGroup.LayoutParams;
 
 /**
  * A SurfaceView that maintains its aspect ratio to be a desired target value.
@@ -98,6 +96,7 @@ public class FixedAspectSurfaceView extends SurfaceView {
 
         // Sort out which dimension to scale, if either can be. There are 9 combinations of
         // possible measure specs; a few cases below handle multiple combinations
+        //noinspection StatementWithEmptyBody
         if (widthMode == MeasureSpec.EXACTLY && heightMode == MeasureSpec.EXACTLY) {
             // Can't adjust sizes at all, do nothing
         } else if (widthMode == MeasureSpec.EXACTLY) {
@@ -148,9 +147,6 @@ public class FixedAspectSurfaceView extends SurfaceView {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (mGestureDetector != null) {
-            return mGestureDetector.onTouchEvent(event);
-        }
-        return false;
+        return mGestureDetector != null && mGestureDetector.onTouchEvent(event);
     }
 }

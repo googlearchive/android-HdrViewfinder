@@ -24,6 +24,7 @@ import android.hardware.camera2.CaptureRequest;
 import android.os.ConditionVariable;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.support.annotation.NonNull;
 import android.util.Log;
 import android.view.Surface;
 
@@ -85,6 +86,7 @@ public class CameraOps {
         mCameraHandler = new Handler(mCameraThread.getLooper());
 
         mCameraHandler.post(new Runnable() {
+            @SuppressWarnings("MissingPermission")
             public void run() {
                 if (mCameraDevice != null) {
                     throw new IllegalStateException("Camera already open");
@@ -208,7 +210,7 @@ public class CameraOps {
             new CameraCaptureSession.StateCallback() {
 
                 @Override
-                public void onConfigured(CameraCaptureSession session) {
+                public void onConfigured(@NonNull CameraCaptureSession session) {
                     mCameraSession = session;
                     mReadyHandler.post(new Runnable() {
                         public void run() {
@@ -224,7 +226,7 @@ public class CameraOps {
                 }
 
                 @Override
-                public void onConfigureFailed(CameraCaptureSession session) {
+                public void onConfigureFailed(@NonNull CameraCaptureSession session) {
                     mErrorDisplayer.showErrorDialog("Unable to configure the capture session");
                     mCameraDevice.close();
                     mCameraDevice = null;
@@ -238,25 +240,25 @@ public class CameraOps {
     private CameraDevice.StateCallback mCameraDeviceListener = new CameraDevice.StateCallback() {
 
         @Override
-        public void onOpened(CameraDevice camera) {
+        public void onOpened(@NonNull CameraDevice camera) {
             mCameraDevice = camera;
             startCameraSession();
         }
 
         @Override
-        public void onClosed(CameraDevice camera) {
+        public void onClosed(@NonNull CameraDevice camera) {
             mCloseWaiter.open();
         }
 
         @Override
-        public void onDisconnected(CameraDevice camera) {
+        public void onDisconnected(@NonNull CameraDevice camera) {
             mErrorDisplayer.showErrorDialog("The camera device has been disconnected.");
             camera.close();
             mCameraDevice = null;
         }
 
         @Override
-        public void onError(CameraDevice camera, int error) {
+        public void onError(@NonNull CameraDevice camera, int error) {
             mErrorDisplayer.showErrorDialog("The camera encountered an error:" + error);
             camera.close();
             mCameraDevice = null;
@@ -269,16 +271,16 @@ public class CameraOps {
      * start.
      */
     public interface CameraReadyListener {
-        public void onCameraReady();
+        void onCameraReady();
     }
 
     /**
      * Simple listener for displaying error messages
      */
     public interface ErrorDisplayer {
-        public void showErrorDialog(String errorMessage);
+        void showErrorDialog(String errorMessage);
 
-        public String getErrorString(CameraAccessException e);
+        String getErrorString(CameraAccessException e);
     }
 
 }

@@ -36,25 +36,18 @@ public class ViewfinderProcessor {
     private Allocation mPrevAllocation;
     private Allocation mOutputAllocation;
 
-    private Surface mOutputSurface;
-    private HandlerThread mProcessingThread;
     private Handler mProcessingHandler;
     private ScriptC_hdr_merge mHdrMergeScript;
 
     public ProcessingTask mHdrTask;
     public ProcessingTask mNormalTask;
 
-    private Size mSize;
-
     private int mMode;
 
     public final static int MODE_NORMAL = 0;
-    public final static int MODE_SIDE_BY_SIDE = 1;
     public final static int MODE_HDR = 2;
 
     public ViewfinderProcessor(RenderScript rs, Size dimensions) {
-        mSize = dimensions;
-
         Type.Builder yuvTypeBuilder = new Type.Builder(rs, Element.YUV(rs));
         yuvTypeBuilder.setX(dimensions.getWidth());
         yuvTypeBuilder.setY(dimensions.getHeight());
@@ -72,9 +65,9 @@ public class ViewfinderProcessor {
         mOutputAllocation = Allocation.createTyped(rs, rgbTypeBuilder.create(),
                 Allocation.USAGE_IO_OUTPUT | Allocation.USAGE_SCRIPT);
 
-        mProcessingThread = new HandlerThread("ViewfinderProcessor");
-        mProcessingThread.start();
-        mProcessingHandler = new Handler(mProcessingThread.getLooper());
+        HandlerThread processingThread = new HandlerThread("ViewfinderProcessor");
+        processingThread.start();
+        mProcessingHandler = new Handler(processingThread.getLooper());
 
         mHdrMergeScript = new ScriptC_hdr_merge(rs);
 
